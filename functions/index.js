@@ -31,6 +31,7 @@ exports.test = functions.https.onCall(async (data, context) => {
     };
     console.log("fcm: ", fcm);
     console.log("notifications: ", notifications);
+    console.log("notifications.length: ", notifications.length);
     if (fcm.length > 0 && notifications.length > 0) {
       var myObj = {
         "id": ids[i],
@@ -58,60 +59,82 @@ exports.test = functions.https.onCall(async (data, context) => {
       myObj.notificationDatas = notificationDatas
     }
 //    console.log("myObj.notificationDatas: ", myObj.notificationDatas)
-    myObjs.push(myObj);
+    if (fcm.length > 0 && notifications.length > 0) {
+      myObjs.push(myObj);
+    }
   }
 
-//  console.log("myObjs: ", myObjs);
-
-  var symbols = new Set();
-  for (let i = 0; i < myObjs.length; i++) {
-    console.log("id: ", myObjs[i].id);
-    for (let j = 0; j < myObjs[i].notificationDatas.length; j++) {
-//      console.log("notificationDatas: ", myObjs[i].notificationDatas[j].symbol);
-      symbols.add(myObjs[i].notificationDatas[j].symbol);
+  if (myObjs.length > 0) {
+    var symbols = new Set();
+    for (let i = 0; i < myObjs.length; i++) {
+      console.log("id: ", myObjs[i].id);
+      for (let j = 0; j < myObjs[i].notificationDatas.length; j++) {
+        symbols.add(myObjs[i].notificationDatas[j].symbol);
+      };
     };
-  };
 
-  let array = Array.from(symbols);
-  let string = array.join(",");
-  console.log("symbols: ", string);
+    let array = Array.from(symbols);
+    let string = array.join(",");
+    console.log("symbols: ", string);
 
-  const options = {
-    hostname: 'financialmodelingprep.com',
-    port: 443,
-    path: 'https://financialmodelingprep.com/api/v3/quote-short/' + string + '?apikey=w5aSHK4lDmUdz6wSbKtSlcCgL1ckI12Q',
-    method: 'GET'
-  };
+    const options = {
+      hostname: 'financialmodelingprep.com',
+      port: 443,
+      path: 'https://financialmodelingprep.com/api/v3/quote-short/' + string + '?apikey=w5aSHK4lDmUdz6wSbKtSlcCgL1ckI12Q',
+      method: 'GET'
+    };
 
-  const req = https.request(options, (res) => {
-    res.on('data', (d) => {
-      let financialData = JSON.parse(d);
-      console.log("financialData: ", financialData);
-      for (let i = 0; i < financialData.length; i++) {
-        let symbol = financialData[i].symbol;
-        for (let j = 0; j < myObjs.length; j++) {
-          for (let k = 0; k < myObjs[j].notificationDatas.length; k++) {
-            if (myObjs[j].notificationDatas[k].symbol == symbol) {
-              myObjs[j].notificationDatas[k].price = financialData[i].price;
-              myObjs[j].notificationDatas[k].volume = financialData[i].volume;
+    const req = https.request(options, (res) => {
+      res.on('data', (d) => {
+        let financialData = JSON.parse(d);
+        console.log("financialData: ", financialData);
+        for (let i = 0; i < financialData.length; i++) {
+          let symbol = financialData[i].symbol;
+          for (let j = 0; j < myObjs.length; j++) {
+            for (let k = 0; k < myObjs[j].notificationDatas.length; k++) {
+              if (myObjs[j].notificationDatas[k].symbol == symbol) {
+                myObjs[j].notificationDatas[k].price = financialData[i].price;
+                myObjs[j].notificationDatas[k].volume = financialData[i].volume;
+              }
             }
           }
         }
-      }
-      for (let i = 0; i < myObjs.length; i++) {
-        console.log("id: ", myObjs[i].id);
-        for (let j = 0; j < myObjs[i].notificationDatas.length; j++) {
-          console.log("notificationDatas: ", myObjs[i].notificationDatas[j]);
+        for (let i = 0; i < myObjs.length; i++) {
+          console.log("id: ", myObjs[i].id);
+          for (let j = 0; j < myObjs[i].notificationDatas.length; j++) {
+            console.log("notificationDatas: ", myObjs[i].notificationDatas[j]);
+            if (myObjs[i].notificationDatas[j].notificationType == 'Price') {
+              switch(notificationDatas[j].action) {
+                case '>':
+                  console.log("action: >");
+                  break;
+                case '>=':
+                  console.log("action: >=");
+                  break;
+                case '<':
+                  console.log("action: <");
+                  break;
+                case '<=':
+                  console.log("action: <=");
+                  break;
+                case '=':
+                  console.log("action: =");
+                  break;
+                default:
+                  console.log("action: default");
+              }
+            }
+          };
         };
-      };
+      });
     });
-  });
-  req.on('error', (error) => {
-    console.log("error: ", error);
-  });
 
-  req.end()
+    req.on('error', (error) => {
+      console.log("error: ", error);
+    });
 
+    req.end()
+  }
  
 /*
       const payload = {
