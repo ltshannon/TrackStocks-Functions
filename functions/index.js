@@ -8,6 +8,49 @@ const FieldValue = require('firebase-admin').firestore.FieldValue;
 const https = require('https');
 const { v4: uuidv4 } = require("uuid");
 
+
+exports.afterHoursNotification = onSchedule("*/5 21,22,23 * * 1-5", async (event) => {
+  console.log("afterHoursNotification: \n\n\n\n\n");
+  const response = await fetch("https://financialmodelingprep.com/api/v3/is-the-market-open?exchange=US&apikey=w5aSHK4lDmUdz6wSbKtSlcCgL1ckI12Q");
+  if (response.ok) {
+    let data = await response.text();
+    if (checkIfDayMarketIsOpened(data) == true) {
+      console.log("Market holiday for after hours!");
+      return 1
+    }
+  } else {
+    return -1;
+  }
+
+  
+
+
+});
+
+function checkIfDayMarketIsOpened(data) {
+  let marketData = JSON.parse(data);
+  let stockMarketHolidays = marketData.stockMarketHolidays;
+  let time = new Date(Date.now());
+  let ank = time.toLocaleString('en-US', { timeZone: 'America/New_York' });
+  var date = ank.split(',')
+  var mdy = date[0];
+  mdy = mdy.split('/');
+  var month = parseInt(mdy[0]);
+  var day = parseInt(mdy[1]);
+  var year = parseInt(mdy[2]);
+  if (day < 10) { day = '0' + day; } 
+  if (month < 10) { month = '0' + month; } 
+  var formattedDate = year + '-' + month + '-' + day;
+  
+  for (let i = 0; i < stockMarketHolidays.length; i++) {
+    if (stockMarketHolidays[i].year == year) {
+      let array = Object.values(stockMarketHolidays[i]);
+      return array.includes(formattedDate);
+    }
+  };
+
+}
+
 exports.stockNotification = onSchedule("*/5 14-21 * * 1-5", async (event) => {
   console.log("New output: \n\n\n\n\n");
 
@@ -44,7 +87,7 @@ exports.stockNotification = onSchedule("*/5 14-21 * * 1-5", async (event) => {
     console.log("Market is closing!");
   }
 
-  var ids = []
+  var ids = [];
   const contactRef = admin.firestore().collection('users');
   const snapshot = await contactRef.get();
   snapshot.forEach(doc => {
